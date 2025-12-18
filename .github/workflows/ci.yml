@@ -17,8 +17,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: danyalomin01-stack/KubShell
-        # Если репозиторий приватный, добавьте токен:
-        # token: ${{ secrets.PAT_TOKEN }}
+        
 
     - name: Pull Docker image
       run: docker pull ghcr.io/xardb/kubshfuse:master
