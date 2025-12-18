@@ -45,19 +45,18 @@ jobs:
     - name: Verify kubsh.deb exists
       run: |
         echo "Checking for kubsh.deb file..."
-        if [ -f "kubsh.deb" ]; then
-          echo "✅ kubsh.deb found!"
-          ls -la kubsh.deb
+        ls -la build
+        if ls build/*.deb 1> /dev/null 2>&1; then
+          echo "✅ deb package found!"
         else
-          echo "❌ kubsh.deb not found!"
-          echo "Files in current directory:"
-          ls -la
+          echo "❌ deb package not found!"
           exit 1
         fi
+
 
     - name: Upload kubsh.deb as artifact
       uses: actions/upload-artifact@v4
       with:
         name: kubsh-package
-        path: kubsh.deb
-        retention-days: 30
+        path: build/*.deb
+
