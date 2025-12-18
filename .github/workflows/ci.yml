@@ -32,13 +32,15 @@ jobs:
 
     - name: Run tests in container
       run: |
-          docker run --rm \
+        docker run --rm \
           -v $PWD:/mnt \
+          -w /mnt \
           --device /dev/fuse \
           --cap-add SYS_ADMIN \
           --security-opt apparmor:unconfined \
           ghcr.io/xardb/kubshfuse:master \
           make test
+
 
     - name: Verify kubsh.deb exists
       run: |
