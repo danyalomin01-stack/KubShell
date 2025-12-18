@@ -38,7 +38,7 @@ jobs:
           --cap-add SYS_ADMIN \
           --security-opt apparmor:unconfined \
           ghcr.io/xardb/kubshfuse:master \
-          make deb
+          make test
 
     - name: Verify kubsh.deb exists
       run: |
