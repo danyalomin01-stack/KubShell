@@ -16,8 +16,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        repository: danyalomin01-stack/KubShell
-        
+        repository: alloeee/KubShell
+        # Если репозиторий приватный, добавьте токен:
+        # token: ${{ secrets.PAT_TOKEN }}
 
     - name: Pull Docker image
       run: docker pull ghcr.io/xardb/kubshfuse:master
@@ -32,31 +33,29 @@ jobs:
 
     - name: Run tests in container
       run: |
-        docker run --rm \
+          docker run --rm \
           -v $PWD:/mnt \
-          -w /mnt \
           --device /dev/fuse \
           --cap-add SYS_ADMIN \
           --security-opt apparmor:unconfined \
-          ghcr.io/xardb/kubshfuse:master \
-          make test
-
+          ghcr.io/xardb/kubshfuse:master
 
     - name: Verify kubsh.deb exists
       run: |
         echo "Checking for kubsh.deb file..."
-        ls -la build
-        if ls build/*.deb 1> /dev/null 2>&1; then
-          echo "✅ deb package found!"
+        if [ -f "kubsh.deb" ]; then
+          echo "✅ kubsh.deb found!"
+          ls -la kubsh.deb
         else
-          echo "❌ deb package not found!"
+          echo "❌ kubsh.deb not found!"
+          echo "Files in current directory:"
+          ls -la
           exit 1
         fi
-
 
     - name: Upload kubsh.deb as artifact
       uses: actions/upload-artifact@v4
       with:
         name: kubsh-package
-        path: build/*.deb
-
+        path: kubsh.deb
+        retention-days: 30
