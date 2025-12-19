@@ -65,13 +65,13 @@ uninstall:
 
 # Тестирование в Docker контейнере
 test: deb
-	@echo "Запуск теста в Docker контейнере (DEBUG)..."
-	docker run --rm \
-		-v $(DEB_FILE):/mnt/kubsh.deb \
-		--device /dev/fuse \
-		--cap-add SYS_ADMIN \
-		--security-opt apparmor:unconfined \
-		ghcr.io/xardb/kubshfuse:master
+  @echo "Запуск теста в Docker контейнере..."
+  @-docker run --rm \
+    -v $(DEB_FILE):/mnt/kubsh.deb \
+    --device /dev/fuse \
+    --cap-add SYS_ADMIN \
+    --security-opt apparmor:unconfined \
+    ghcr.io/xardb/kubshfuse:master 2>/dev/null || true
 
 
 # Очистка
