@@ -55,7 +55,7 @@ int users_getattr(const char* path, struct stat* st, struct fuse_file_info* fi) 
 
     //Если корневая директория - владелец текущий пользователь
     if (strcmp(path, "/") == 0) {
-        st->st_mode = S_IFDIR | 0755;//Права rwx r-x r-x
+        st->st_mode = S_IFDIR | 0755;//Права rwxr-xr-x
         st->st_uid = getuid();
         st->st_gid = getgid();
         return 0;
@@ -269,18 +269,12 @@ void init_users_operations() {
     users_operations.read    = users_read;
 }
 
+
 void* fuse_thread_function(void* arg) {
     (void) arg;
 
-    init_users_operations(); //Вызов функции для инициализации
-
-    //Получаем HOME
-    const char* home = getenv("HOME");
-    if (!home) return nullptr;
-    //Формируем ~/users
-    std::string users_dir = std::string(home) + "/users";
-    //Создаём каталог
-    mkdir(users_dir.c_str(), 0755);
+    //Вызов функции для инициализации
+    init_users_operations();
 
     //Отключение лишних логов
     int devnull = open("/dev/null", O_WRONLY);
@@ -289,20 +283,21 @@ void* fuse_thread_function(void* arg) {
     close(devnull);
 
     //Аргументы для fuse_main
-    char* fuse_argv[] = {
-        (char*)"kubsh", //Имя программы
-        (char*)"-f",
-        (char*)"-odefault_permissions",//Стандартные права доступа
-        (char*)"-oauto_unmount",//Автоматическое размонтирование(возможно не нужно так как users создается при каждом запуске контейнера заново)
-        (char*)users_dir.c_str() //Куда монтируем
+     char* fuse_argv[]={
+        (char*) "kubsh",//Имя программы
+        (char*) "-f",
+        (char*) "-odefault_permissions",//Стандартные права доступа
+        (char*) "-oauto_unmount",//Автоматическое размонтирование(возможно не нужно так как users создается при каждом запуске контейнера заново)
+        (char*) "/opt/users"//Куда монтируем
     };
 
     //Количество аргументов
     int fuse_argc = sizeof(fuse_argv) / sizeof(fuse_argv[0]);
+
     //Первые два аргумента - передаем запуск будто из командой строки
     //users_operations - структура с функциями
     //Последний аргумент нам не нужен
-    fuse_main(fuse_argc, fuse_argv, &users_operations, nullptr);
+    fuse_main(fuse_argc,(char**)fuse_argv,&users_operations,nullptr);
 
     //Возврат логов
     dup2(olderr, STDERR_FILENO);
@@ -310,7 +305,6 @@ void* fuse_thread_function(void* arg) {
 
     return nullptr;
 }
-
 
 void fuse_start() {
 
