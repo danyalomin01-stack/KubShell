@@ -16,7 +16,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        repository: alloeee/KubShell
+        repository: danyalomin01-stack/KubShell
         # Если репозиторий приватный, добавьте токен:
         # token: ${{ secrets.PAT_TOKEN }}
 
