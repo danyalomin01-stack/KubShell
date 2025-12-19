@@ -4,6 +4,7 @@ CXXFLAGS = -std=c++20 -Wall -Wextra  -lreadline
 READLINE_FLAGS = -lreadline -lhistory
 FUSE_FLAGS = -I/usr/include/fuse3 -lfuse3 -L/usr/lib/x86_64-linux-gnu
 TARGET = kubsh
+TEST_IMAGE ?= ghcr.io/xardb/kubshfuse:master
 
 # Версия пакета
 VERSION = 1.0.0
@@ -71,7 +72,7 @@ test: deb
     --device /dev/fuse \
     --cap-add SYS_ADMIN \
     --security-opt apparmor:unconfined \
-    ghcr.io/xardb/kubshfuse:master 2>/dev/null || true
+    $(TEST_IMAGE) 2>/dev/null || true
 
 
 # Очистка
