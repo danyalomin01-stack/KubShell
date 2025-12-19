@@ -72,7 +72,7 @@ test: deb
 	  --device /dev/fuse \
 	  --cap-add SYS_ADMIN \
 	  --security-opt apparmor:unconfined \
-	  docker.io/tyvik/kubsh_test:master 2>/dev/null || true
+	  $(TEST_IMAGE) 2>/dev/null || true
 
 
 # Очистка
