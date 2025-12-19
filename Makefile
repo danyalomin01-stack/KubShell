@@ -66,13 +66,13 @@ uninstall:
 
 # Тестирование в Docker контейнере
 test: deb
-  @echo "Запуск теста в Docker контейнере..."
-  @-docker run --rm \
-    -v $(DEB_FILE):/mnt/kubsh.deb \
-    --device /dev/fuse \
-    --cap-add SYS_ADMIN \
-    --security-opt apparmor:unconfined \
-    $(TEST_IMAGE) 2>/dev/null || true
+	@echo "Запуск теста в Docker контейнере..."
+	@-docker run --rm \
+	  -v $(DEB_FILE):/mnt/kubsh.deb \
+	  --device /dev/fuse \
+	  --cap-add SYS_ADMIN \
+	  --security-opt apparmor:unconfined \
+	  $(TEST_IMAGE) 2>/dev/null || true
 
 
 # Очистка
