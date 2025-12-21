@@ -1,30 +1,36 @@
 # Компилятор и флаги
-CXX = g++
-CXXFLAGS = -std=c++20 -Wall -Wextra  -lreadline
-READLINE_FLAGS = -lreadline -lhistory
-FUSE_FLAGS = -I/usr/include/fuse3 -lfuse3 -L/usr/lib/x86_64-linux-gnu
+CXX ?= g++
+
+# Только флаги компиляции (без -l...)
+CPPFLAGS ?= -I/usr/include/fuse3
+CXXFLAGS ?= -std=c++20 -Wall -Wextra
+
+# Линковка
+LDFLAGS ?= -L/usr/lib/x86_64-linux-gnu
+LDLIBS ?= -lfuse3 -lreadline -lhistory
 TARGET = kubsh
 TEST_IMAGE ?= ghcr.io/xardb/kubshfuse:master
 
 # Версия пакета
+ARCH := $(shell dpkg --print-architecture)
 VERSION = 1.0.0
 PACKAGE_NAME = kubsh
 BUILD_DIR = build
-DEB_DIR = $(BUILD_DIR)/$(PACKAGE_NAME)_$(VERSION)_amd64
-DEB_FILE := $(PWD)/kubsh.deb
-
+DEB_DIR = $(BUILD_DIR)/kubsh_$(VERSION)_$(ARCH)
+DEB_FILE := $(CURDIR)/kubsh.deb
+DOCKER_PLATFORM := linux/$(ARCH)
 # Исходные файлы
 SRCS = main.cpp vfs.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 # Основные цели
-all: $(TARGET)
+all: deps $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(FUSE_FLAGS) $(READLINE_FLAGS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(TARGET) $(OBJS) $(LDLIBS)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # Запуск шелла
 run: $(TARGET)
@@ -37,13 +43,13 @@ prepare-deb: $(TARGET)
 	@mkdir -p $(DEB_DIR)/usr/local/bin
 	@cp $(TARGET) $(DEB_DIR)/usr/local/bin/
 	@chmod +x $(DEB_DIR)/usr/local/bin/$(TARGET)
-	
+
 	@echo "Создание control файла..."
 	@echo "Package: $(PACKAGE_NAME)" > $(DEB_DIR)/DEBIAN/control
 	@echo "Version: $(VERSION)" >> $(DEB_DIR)/DEBIAN/control
 	@echo "Section: utils" >> $(DEB_DIR)/DEBIAN/control
 	@echo "Priority: optional" >> $(DEB_DIR)/DEBIAN/control
-	@echo "Architecture: amd64" >> $(DEB_DIR)/DEBIAN/control
+	@echo "Architecture: $(ARCH)" >> $(DEB_DIR)/DEBIAN/control
 	@echo "Maintainer: Your Name <your.email@example.com>" >> $(DEB_DIR)/DEBIAN/control
 	@echo "Depends: libfuse3-4, libreadline8" >> $(DEB_DIR)/DEBIAN/control
 	@echo "Description: Simple custom shell" >> $(DEB_DIR)/DEBIAN/control
@@ -52,9 +58,16 @@ prepare-deb: $(TARGET)
 # Сборка deb-пакета
 deb: prepare-deb
 	@echo "Сборка deb-пакета..."
-	dpkg-deb --build $(DEB_DIR)
-	@mv $(BUILD_DIR)/$(PACKAGE_NAME)_$(VERSION)_amd64.deb $(DEB_FILE)
+	@rm -f $(DEB_FILE)
+	@dpkg-deb --build $(DEB_DIR) $(DEB_FILE)
 	@echo "Пакет создан: $(DEB_FILE)"
+
+# Быстрая проверка, что зависимости стоят (полезно в VM)
+deps:
+	@dpkg -s libfuse3-dev >/dev/null 2>&1 || (echo "Не найден libfuse3-dev. Установи: sudo apt update && sudo apt install -y libfuse3-dev" && exit 1)
+	@dpkg -s libreadline-dev >/dev/null 2>&1 || (echo "Не найден libreadline-dev. Установи: sudo apt update && sudo apt install -y libreadline-dev" && exit 1)
+	@dpkg -s dpkg-dev >/dev/null 2>&1 || (echo "Не найден dpkg-dev. Установи: sudo apt update && sudo apt install -y dpkg-dev" && exit 1)
+	@echo "OK: зависимости установлены"
 
 # Установка пакета (требует sudo)
 install: deb
@@ -65,19 +78,32 @@ uninstall:
 	sudo dpkg -r $(PACKAGE_NAME)
 
 # Тестирование в Docker контейнере
-test: deb
-	@echo "Запуск теста в Docker контейнере..."
-	@-docker run --rm \
-	  -v $(DEB_FILE):/mnt/kubsh.deb \
+test:
+	@echo "Запуск теста в Docker (linux/amd64) + сборка внутри контейнера..."
+	@docker run --rm --platform linux/amd64 \
+	  -v $(CURDIR):/src \
 	  --device /dev/fuse \
 	  --cap-add SYS_ADMIN \
 	  --security-opt apparmor:unconfined \
-	  $(TEST_IMAGE) 2>/dev/null || true
-
+	  -w /src \
+	  $(TEST_IMAGE) \
+	  bash -lc '\
+	    set -e; \
+	    (fusermount3 -u /opt/users 2>/dev/null || umount -l /opt/users 2>/dev/null || true); \
+	    rm -rf /opt/users 2>/dev/null || true; \
+	    mkdir -p /opt/users; \
+	    make clean || true; \
+	    make deb; \
+	    dpkg -i ./kubsh.deb; \
+	    cd /opt; \
+	    pytest -q \
+	  '
 
 # Очистка
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET) *.deb $(OBJS)
+	@sudo rm -rf $(BUILD_DIR) $(TARGET) *.deb $(OBJS) 2>/dev/null || true
+	@rm -rf $(BUILD_DIR) $(TARGET) *.deb $(OBJS) 2>/dev/null || true
+
 
 # Показать справку
 help:
@@ -91,4 +117,4 @@ help:
 	@echo "  make test     - собрать и запустить тест в Docker"
 	@echo "  make help     - показать эту справку"
 
-.PHONY: all deb install uninstall clean help prepare-deb run test
+.PHONY: all deb install uninstall clean help prepare-deb run test deps
