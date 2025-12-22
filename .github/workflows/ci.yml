@@ -21,7 +21,7 @@ jobs:
 
       - name: Run tests in container (FUSE)
         run: |
-          docker run --rm -it \
+          docker run --rm \
             --device /dev/fuse \
             --cap-add SYS_ADMIN \
             --security-opt apparmor:unconfined \
