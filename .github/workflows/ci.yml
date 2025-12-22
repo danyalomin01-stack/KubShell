@@ -1,61 +1,64 @@
-name: Build and Package kubsh.deb
+name: Build and Test kubsh.deb
 
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  # Можно добавить ручной запуск
   workflow_dispatch:
 
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        repository: alloeee/KubShell
-        # Если репозиторий приватный, добавьте токен:
-        # token: ${{ secrets.PAT_TOKEN }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Pull Docker image
-      run: docker pull ghcr.io/xardb/kubshfuse:master
+      # Собираем образ прямо в CI (amd64), чтобы можно было docker run без qemu
+      - name: Build Docker image (amd64)
+        run: |
+          docker build -t my-kubsh:ci .
 
-    - name: Build package in container
-      run: |
-        docker run --rm \
-        -v $PWD:/mnt \
-        -w /mnt \
-        ghcr.io/xardb/kubshfuse:master \
-        make deb
-
-    - name: Run tests in container
-      run: |
+      - name: Build package in container
+        run: |
           docker run --rm \
-          -v $PWD:/mnt \
-          --device /dev/fuse \
-          --cap-add SYS_ADMIN \
-          --security-opt apparmor:unconfined \
-          ghcr.io/xardb/kubshfuse:master
+            -v $PWD:/mnt \
+            -w /mnt \
+            my-kubsh:ci \
+            bash -lc "make clean || true; make deb"
 
-    - name: Verify kubsh.deb exists
-      run: |
-        echo "Checking for kubsh.deb file..."
-        if [ -f "kubsh.deb" ]; then
-          echo "✅ kubsh.deb found!"
-          ls -la kubsh.deb
-        else
-          echo "❌ kubsh.deb not found!"
-          echo "Files in current directory:"
-          ls -la
-          exit 1
-        fi
+      # Тесты с FUSE: на GitHub Actions чаще всего проще --privileged
+      - name: Run tests in container (FUSE)
+        run: |
+          docker run --rm --privileged \
+            -v $PWD:/mnt \
+            -w /mnt \
+            my-kubsh:ci \
+            bash -lc "\
+              dpkg -i ./kubsh.deb; \
+              mkdir -p /opt/users; \
+              kubsh >/dev/null 2>&1 & \
+              sleep 1; \
+              pytest -v --log-cli-level=10 kubsh_test_opt \
+            "
 
-    - name: Upload kubsh.deb as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kubsh-package
-        path: kubsh.deb
-        retention-days: 30
+      - name: Verify kubsh.deb exists
+        run: |
+          echo "Checking for kubsh.deb file..."
+          if [ -f "kubsh.deb" ]; then
+            echo "✅ kubsh.deb found!"
+            ls -la kubsh.deb
+          else
+            echo "❌ kubsh.deb not found!"
+            echo "Files in current directory:"
+            ls -la
+            exit 1
+          fi
+
+      - name: Upload kubsh.deb as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubsh-package
+          path: kubsh.deb
+          retention-days: 30
