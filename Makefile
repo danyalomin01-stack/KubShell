@@ -6,14 +6,10 @@ CPPFLAGS ?= -I/usr/include/fuse3
 CXXFLAGS ?= -std=c++20 -Wall -Wextra
 
 # Линковка
-<<<<<<< HEAD
-LDFLAGS ?= -L/usr/lib/x86_64-linux-gnu
-=======
 LDFLAGS ?= -L/usr/lib/$(DEB_HOST_MULTIARCH)
->>>>>>> dd0e0f9 (Fix VFS mount and docker test flow)
 LDLIBS ?= -lfuse3 -lreadline -lhistory
 TARGET = kubsh
-
+TEST_IMAGE ?= my-kubsh:arm
 DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo aarch64-linux-gnu)
 
 # Версия пакета
@@ -84,27 +80,6 @@ uninstall:
 
 # Тестирование в Docker контейнере
 test:
-<<<<<<< HEAD
-	@echo "Запуск теста в Docker (linux/amd64) + сборка внутри контейнера..."
-	@docker run --rm --platform linux/amd64 \
-	  -v $(CURDIR):/src \
-	  --device /dev/fuse \
-	  --cap-add SYS_ADMIN \
-	  --security-opt apparmor:unconfined \
-	  -w /src \
-	  $(TEST_IMAGE) \
-	  bash -lc '\
-	    set -e; \
-	    (fusermount3 -u /opt/users 2>/dev/null || umount -l /opt/users 2>/dev/null || true); \
-	    rm -rf /opt/users 2>/dev/null || true; \
-	    mkdir -p /opt/users; \
-	    make clean || true; \
-	    make deb; \
-	    dpkg -i ./kubsh.deb; \
-	    cd /opt; \
-	    pytest -q \
-	  '
-=======
 	@echo "Запуск теста в Docker"
 	@docker run --rm -it \
 	  --device /dev/fuse \
@@ -113,7 +88,6 @@ test:
 	  -v $(PWD):/mnt \
 	  kurilovo/my-kubsh:arm \
 	  bash -lc '/opt/check.sh'
->>>>>>> dd0e0f9 (Fix VFS mount and docker test flow)
 
 # Очистка
 clean:
