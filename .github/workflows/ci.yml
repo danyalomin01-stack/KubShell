@@ -17,7 +17,7 @@ jobs:
 
       - name: Pull kubsh image
         run: |
-          docker pull kurilovo/my-kubsh:arm
+          docker pull kurilovo/my-kubsh:latest
 
       - name: Run tests in container (FUSE)
         run: |
@@ -26,7 +26,7 @@ jobs:
             --cap-add SYS_ADMIN \
             --security-opt apparmor:unconfined \
             -v $PWD:/mnt \
-            kurilovo/my-kubsh:arm \
+            kurilovo/my-kubsh:latest \
             bash -lc "/opt/check.sh"
 
       - name: Verify kubsh.deb exists
