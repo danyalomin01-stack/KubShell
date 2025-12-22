@@ -17,24 +17,16 @@ jobs:
 
       - name: Pull kubsh image
         run: |
-          docker pull danil090/my-kubsh:arm
-
-      - name: Build kubsh.deb in container
-        run: |
-          docker run --rm \
-            -v $PWD:/mnt \
-            -w /mnt \
-            danil090/my-kubsh:arm \
-            make clean || true && make deb
+          docker pull kurilovo/my-kubsh:arm
 
       - name: Run tests in container (FUSE)
         run: |
-          docker run --rm \
+          docker run --rm -it \
             --device /dev/fuse \
             --cap-add SYS_ADMIN \
             --security-opt apparmor:unconfined \
             -v $PWD:/mnt \
-            danil090/my-kubsh:arm \
+            kurilovo/my-kubsh:arm \
             bash -lc "/opt/check.sh"
 
       - name: Verify kubsh.deb exists
