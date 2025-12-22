@@ -132,6 +132,7 @@ int main()
 
 
     fuse_start();
+    //sleep(1);
 
     std::cerr << "$ ";
 

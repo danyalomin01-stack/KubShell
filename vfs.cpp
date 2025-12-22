@@ -293,6 +293,9 @@ void* fuse_thread_function(void* arg) {
 
     //Количество аргументов
     int fuse_argc = sizeof(fuse_argv) / sizeof(fuse_argv[0]);
+    
+    system("mkdir -p /opt/users"); //22.12 20:22
+
 
     //Первые два аргумента - передаем запуск будто из командой строки
     //users_operations - структура с функциями

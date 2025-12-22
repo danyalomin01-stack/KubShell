@@ -6,10 +6,15 @@ CPPFLAGS ?= -I/usr/include/fuse3
 CXXFLAGS ?= -std=c++20 -Wall -Wextra
 
 # Линковка
+<<<<<<< HEAD
 LDFLAGS ?= -L/usr/lib/x86_64-linux-gnu
+=======
+LDFLAGS ?= -L/usr/lib/$(DEB_HOST_MULTIARCH)
+>>>>>>> dd0e0f9 (Fix VFS mount and docker test flow)
 LDLIBS ?= -lfuse3 -lreadline -lhistory
 TARGET = kubsh
-TEST_IMAGE ?= ghcr.io/xardb/kubshfuse:master
+
+DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo aarch64-linux-gnu)
 
 # Версия пакета
 ARCH := $(shell dpkg --print-architecture)
@@ -51,7 +56,7 @@ prepare-deb: $(TARGET)
 	@echo "Priority: optional" >> $(DEB_DIR)/DEBIAN/control
 	@echo "Architecture: $(ARCH)" >> $(DEB_DIR)/DEBIAN/control
 	@echo "Maintainer: Your Name <your.email@example.com>" >> $(DEB_DIR)/DEBIAN/control
-	@echo "Depends: libfuse3-4, libreadline8" >> $(DEB_DIR)/DEBIAN/control
+	@echo "Depends: libfuse3-3 | libfuse3-4, libreadline8" >> $(DEB_DIR)/DEBIAN/control
 	@echo "Description: Simple custom shell" >> $(DEB_DIR)/DEBIAN/control
 	@echo " A simple custom shell implementation for learning purposes." >> $(DEB_DIR)/DEBIAN/control
 
@@ -79,6 +84,7 @@ uninstall:
 
 # Тестирование в Docker контейнере
 test:
+<<<<<<< HEAD
 	@echo "Запуск теста в Docker (linux/amd64) + сборка внутри контейнера..."
 	@docker run --rm --platform linux/amd64 \
 	  -v $(CURDIR):/src \
@@ -98,6 +104,16 @@ test:
 	    cd /opt; \
 	    pytest -q \
 	  '
+=======
+	@echo "Запуск теста в Docker"
+	@docker run --rm -it \
+	  --device /dev/fuse \
+	  --cap-add SYS_ADMIN \
+	  --security-opt apparmor:unconfined \
+	  -v $(PWD):/mnt \
+	  kurilovo/my-kubsh:arm \
+	  bash -lc '/opt/check.sh'
+>>>>>>> dd0e0f9 (Fix VFS mount and docker test flow)
 
 # Очистка
 clean:
